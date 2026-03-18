@@ -1,8 +1,8 @@
-# Helsinki Aurinko ☀️
+# Aurinko Helsingissä ☀️
 
 Auringonnousu- ja laskuaikojen seuranta Helsingissä. Toimii PWA:na — asennettavissa suoraan puhelimeen.
 
-## Ominaisuudet
+## Ominaisuudet 
 
 - Tänään: nousu, lasku, päivän pituus, muutos eiliseen
 - 14 päivän ennuste taulukossa
