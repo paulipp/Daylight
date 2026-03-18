@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helsinki Aurinko</title>
+<meta name="description" content="Auringonnousu- ja laskuajat Helsingissä">
+<meta name="theme-color" content="#0d0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Aurinko">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="shortcut icon" href="favicon.ico">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #0d0f1a;
+  color: #e2d9c0;
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  padding: 16px;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid #2a2d3e;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.topbar-title { font-size: 11px; color: #6b6880; letter-spacing: 0.15em; text-transform: uppercase; }
+#clock { font-size: 20px; color: #fbbf24; letter-spacing: 0.05em; }
+
+.today-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 1px;
+  background: #2a2d3e;
+  border: 1px solid #2a2d3e;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.tg-cell { background: #13151f; padding: 10px 12px; }
+.tg-label {
+  font-size: 9px; color: #6b6880;
+  text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 4px;
+}
+.tg-val { font-size: 18px; color: #fbbf24; letter-spacing: 0.02em; line-height: 1.1; }
+.tg-val.rise { color: #fde68a; }
+.tg-val.set  { color: #fb923c; }
+.tg-val.len  { color: #a3e635; }
+.tg-val.diff { font-size: 15px; }
+.tg-val.plus  { color: #4ade80; }
+.tg-val.minus { color: #f87171; }
+.tg-sub { font-size: 9px; color: #6b6880; margin-top: 3px; }
+
+.statusbar {
+  background: #13151f; border: 1px solid #2a2d3e;
+  border-radius: 6px; padding: 7px 12px;
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px; font-size: 12px; color: #a09888;
+}
+.dot {
+  width: 6px; height: 6px; background: #fbbf24;
+  border-radius: 50%; flex-shrink: 0;
+  animation: blink 2s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+.section-label {
+  font-size: 9px; color: #6b6880;
+  text-transform: uppercase; letter-spacing: 0.2em;
+  margin-bottom: 6px; padding-left: 2px;
+}
+
+.fc-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+.fc-table th {
+  font-size: 9px; color: #6b6880; text-transform: uppercase;
+  letter-spacing: 0.12em; font-weight: 400; text-align: left;
+  padding: 0 8px 5px; border-bottom: 1px solid #2a2d3e;
+}
+.fc-table th:not(:first-child) { text-align: right; }
+.fc-table td { padding: 5px 8px; border-bottom: 1px solid #191b28; vertical-align: middle; }
+.fc-table tr:last-child td { border-bottom: none; }
+.fc-table tr:hover td { background: #161825; }
+.fc-table tr.today-row td { background: #181b28; }
+.fc-table tr.today-row .fc-day { color: #fbbf24; }
+
+.fc-day  { color: #e2d9c0; font-size: 12px; }
+.fc-rise { color: #fde68a; text-align: right; font-size: 12px; }
+.fc-set  { color: #fb923c; text-align: right; font-size: 12px; }
+.fc-len  { color: #a09888; text-align: right; font-size: 12px; }
+.fc-diff { text-align: right; font-size: 11px; }
+.fc-diff.plus  { color: #4ade80; }
+.fc-diff.minus { color: #f87171; }
+.fc-diff.zero  { color: #6b6880; }
+
+.chart-wrap {
+  background: #13151f; border: 1px solid #2a2d3e;
+  border-radius: 6px; padding: 12px 12px 8px;
+  margin-bottom: 14px; position: relative;
+}
+#sunChart { display: block; width: 100%; cursor: crosshair; }
+.chart-tooltip {
+  position: absolute; background: #0d0f1a;
+  border: 1px solid #3a3d52; border-radius: 5px;
+  padding: 6px 10px; font-size: 11px; color: #e2d9c0;
+  pointer-events: none; opacity: 0; transition: opacity 0.1s;
+  white-space: nowrap; z-index: 10; line-height: 1.7;
+}
+
+.footer { font-size: 10px; color: #3a3d52; text-align: right; letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-title">Helsinki · 60.17°N 24.94°E</span>
+  <span id="clock">--:--:--</span>
+</div>
+
+<div class="today-grid">
+  <div class="tg-cell">
+    <div class="tg-label">Nousu</div>
+    <div class="tg-val rise" id="riseTime">--:--</div>
+    <div class="tg-sub" id="todayDate">--</div>
+  </div>
+  <div class="tg-cell">
+    <div class="tg-label">Lasku</div>
+    <div class="tg-val set" id="setTime">--:--</div>
+    <div class="tg-sub">&nbsp;</div>
+  </div>
+  <div class="tg-cell">
+    <div class="tg-label">Päivän pituus</div>
+    <div class="tg-val len" id="dayLen">--h --m</div>
+    <div class="tg-sub">&nbsp;</div>
+  </div>
+  <div class="tg-cell">
+    <div class="tg-label">Muutos</div>
+    <div class="tg-val diff" id="dayDiff">±--</div>
+    <div class="tg-sub">vs. eilen</div>
+  </div>
+</div>
+
+<div class="statusbar">
+  <div class="dot"></div>
+  <span id="nowStatus">Lasketaan...</span>
+</div>
+
+<div class="section-label">Seuraavat 14 päivää</div>
+<table class="fc-table">
+  <thead>
+    <tr>
+      <th>Pvm</th>
+      <th>Nousu</th>
+      <th>Lasku</th>
+      <th>Pituus</th>
+      <th>Δ</th>
+    </tr>
+  </thead>
+  <tbody id="fcBody"></tbody>
+</table>
+
+<div class="section-label">Päivän pituus — seuraavat 3 kuukautta</div>
+<div class="chart-wrap" id="chartCard">
+  <canvas id="sunChart"></canvas>
+  <div class="chart-tooltip" id="chartTooltip"></div>
+</div>
+
+<div class="footer">Jean Meeus -algoritmi · Helsinki, Suomi</div>
+
+<script>
+const LAT = 60.1699, LON = 24.9384;
+
+function getDST(date) {
+  const y = date.getFullYear();
+  const s = lastSun(y,2), e = lastSun(y,9);
+  return (date >= s && date < e) ? 3 : 2;
+}
+function lastSun(y,m) {
+  const d = new Date(y, m+1, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+function toJD(d) { return d.getTime()/86400000 + 2440587.5; }
+
+function calcSun(date) {
+  const tz = getDST(date);
+  const JD = toJD(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), 12)));
+  const n = JD - 2451545.0;
+  const L = (280.46 + 0.9856474*n) % 360;
+  const g = ((357.528 + 0.9856003*n) % 360) * Math.PI/180;
+  const lam = (L + 1.915*Math.sin(g) + 0.02*Math.sin(2*g)) * Math.PI/180;
+  const eps = 23.439 * Math.PI/180;
+  const sinDec = Math.sin(eps)*Math.sin(lam);
+  const dec = Math.asin(sinDec);
+  const cosHA = (Math.sin(-0.8333*Math.PI/180) - Math.sin(LAT*Math.PI/180)*sinDec)
+              / (Math.cos(LAT*Math.PI/180)*Math.cos(dec));
+  if (Math.abs(cosHA)>1) return null;
+  const HA = Math.acos(cosHA)*180/Math.PI;
+  const EoT = (-7.655*Math.sin(g) + 9.873*Math.sin(2*lam+3.588) + 0.439*Math.sin(4*lam))/60;
+  const noon = 12 - (LON - 15*tz)/15 - EoT;
+  return { rise: noon - HA/15, set: noon + HA/15 };
+}
+
+function fmt(h) {
+  if (h==null) return '--:--';
+  const hh=Math.floor(h)%24, mm=Math.round((h%1)*60)%60;
+  return String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+function fmtLen(h) {
+  const t=Math.round(h*60);
+  return Math.floor(t/60)+'h '+String(t%60).padStart(2,'0')+'m';
+}
+
+const DAYS = ['Su','Ma','Ti','Ke','To','Pe','La'];
+const MONS = ['tam','hel','maa','huh','tou','kes','hei','elo','syy','lok','mar','jou'];
+
+function update() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    String(now.getHours()).padStart(2,'0')+':'+
+    String(now.getMinutes()).padStart(2,'0')+':'+
+    String(now.getSeconds()).padStart(2,'0');
+
+  const sun = calcSun(now);
+  if (!sun) return;
+
+  document.getElementById('riseTime').textContent = fmt(sun.rise);
+  document.getElementById('setTime').textContent  = fmt(sun.set);
+  document.getElementById('todayDate').textContent =
+    DAYS[now.getDay()]+' '+now.getDate()+'. '+MONS[now.getMonth()];
+
+  const len = sun.set - sun.rise;
+  document.getElementById('dayLen').textContent = fmtLen(len);
+
+  const yest = calcSun(new Date(now-86400000));
+  if (yest) {
+    const diff = Math.round((len - (yest.set-yest.rise))*60);
+    const el = document.getElementById('dayDiff');
+    el.textContent = (diff>=0?'+':'')+diff+'min';
+    el.className = 'tg-val diff '+(diff>0?'plus':diff<0?'minus':'');
+  }
+
+  const nowH = now.getHours()+now.getMinutes()/60+now.getSeconds()/3600;
+  const isDay = nowH>=sun.rise && nowH<=sun.set;
+  let status;
+  if (isDay) {
+    const left=Math.round((sun.set-nowH)*60);
+    status=`Aurinko laskee ${fmt(sun.set)} — jäljellä ${Math.floor(left/60)>0?Math.floor(left/60)+'h ':''}${left%60}min`;
+  } else if (nowH<sun.rise) {
+    const mins=Math.round((sun.rise-nowH)*60);
+    status=`Aurinko nousee ${fmt(sun.rise)} — ${Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':''}${mins%60}min kuluttua`;
+  } else {
+    const tom=new Date(now); tom.setDate(tom.getDate()+1);
+    const ts=calcSun(tom);
+    const mins=ts?Math.round((ts.rise+24-nowH)*60):null;
+    status=`Aurinko nousee huomenna ${ts?fmt(ts.rise):'--:--'} — ${mins&&Math.floor(mins/60)>0?Math.floor(mins/60)+'h ':''}${mins?mins%60:0}min kuluttua`;
+  }
+  document.getElementById('nowStatus').textContent = status;
+}
+
+function renderForecast() {
+  const tbody = document.getElementById('fcBody');
+  const today = new Date();
+  tbody.innerHTML = '';
+  for (let i=0; i<=14; i++) {
+    const d=new Date(today); d.setDate(d.getDate()+i);
+    const s=calcSun(d); if(!s) continue;
+    const len=s.set-s.rise;
+    const prev=calcSun(new Date(d-86400000));
+    const diff=prev?Math.round((len-(prev.set-prev.rise))*60):0;
+    const tr=document.createElement('tr');
+    if(i===0) tr.className='today-row';
+    tr.innerHTML=`
+      <td class="fc-day">${DAYS[d.getDay()]} ${d.getDate()}.${d.getMonth()+1}.</td>
+      <td class="fc-rise">${fmt(s.rise)}</td>
+      <td class="fc-set">${fmt(s.set)}</td>
+      <td class="fc-len">${fmtLen(len)}</td>
+      <td class="fc-diff ${diff>0?'plus':diff<0?'minus':'zero'}">${diff===0?'—':(diff>0?'+':'')+diff+'min'}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function renderChart() {
+  const canvas=document.getElementById('sunChart');
+  const tooltip=document.getElementById('chartTooltip');
+  const card=document.getElementById('chartCard');
+  const dpr=window.devicePixelRatio||1;
+  const PAD={top:14,right:10,bottom:28,left:38};
+  const W=card.clientWidth-24, H=160;
+
+  canvas.width=W*dpr; canvas.height=H*dpr;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr); ctx.clearRect(0,0,W,H);
+
+  const today=new Date();
+  const data=[];
+  for(let i=0;i<=91;i++){
+    const d=new Date(today); d.setDate(d.getDate()+i);
+    const s=calcSun(d);
+    const len=s?s.set-s.rise:(data[i-1]?.len??0);
+    data.push({date:new Date(d),len,rise:s?.rise??null,set:s?.set??null});
+  }
+
+  const minL=5,maxL=21;
+  const iW=W-PAD.left-PAD.right, iH=H-PAD.top-PAD.bottom;
+  const xF=i=>PAD.left+(i/(data.length-1))*iW;
+  const yF=l=>PAD.top+iH-((Math.min(Math.max(l,minL),maxL)-minL)/(maxL-minL))*iH;
+
+  ctx.font=`9px 'DM Mono',monospace`;
+  [6,9,12,15,18].forEach(h=>{
+    const y=yF(h);
+    ctx.beginPath(); ctx.moveTo(PAD.left,y); ctx.lineTo(PAD.left+iW,y);
+    ctx.strokeStyle='#1e2030'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#6b6880'; ctx.textAlign='right';
+    ctx.fillText(h+'h',PAD.left-5,y+3);
+  });
+
+  let lastM=-1;
+  data.forEach((d,i)=>{
+    const m=d.date.getMonth();
+    if(m!==lastM){
+      lastM=m;
+      const x=xF(i);
+      ctx.beginPath(); ctx.moveTo(x,PAD.top+iH); ctx.lineTo(x,PAD.top+iH+3);
+      ctx.strokeStyle='#3a3d52'; ctx.lineWidth=1; ctx.stroke();
+      ctx.fillStyle='#6b6880'; ctx.textAlign='left';
+      ctx.fillText(MONS[m],x+2,H-4);
+    }
+  });
+
+  const grad=ctx.createLinearGradient(0,PAD.top,0,PAD.top+iH);
+  grad.addColorStop(0,'rgba(251,191,36,0.18)');
+  grad.addColorStop(1,'rgba(251,191,36,0.02)');
+  ctx.beginPath(); ctx.moveTo(xF(0),yF(data[0].len));
+  data.forEach((d,i)=>ctx.lineTo(xF(i),yF(d.len)));
+  ctx.lineTo(xF(data.length-1),PAD.top+iH);
+  ctx.lineTo(xF(0),PAD.top+iH);
+  ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  ctx.beginPath(); ctx.moveTo(xF(0),yF(data[0].len));
+  data.forEach((d,i)=>ctx.lineTo(xF(i),yF(d.len)));
+  ctx.strokeStyle='#fbbf24'; ctx.lineWidth=1.5; ctx.lineJoin='round'; ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(xF(0),yF(data[0].len),3,0,Math.PI*2);
+  ctx.fillStyle='#fbbf24'; ctx.fill();
+
+  canvas.onmousemove=e=>{
+    const rect=canvas.getBoundingClientRect();
+    const mx=e.clientX-rect.left;
+    if(mx<PAD.left||mx>PAD.left+iW){tooltip.style.opacity='0';return;}
+    const idx=Math.max(0,Math.min(data.length-1,Math.round(((mx-PAD.left)/iW)*(data.length-1))));
+    const d=data[idx], dd=d.date;
+    tooltip.innerHTML=
+      `<span style="color:#fbbf24">${DAYS[dd.getDay()]} ${dd.getDate()}.${dd.getMonth()+1}.</span><br>`+
+      `↑ ${fmt(d.rise)} &nbsp; ↓ ${fmt(d.set)}<br>`+
+      `☀ ${fmtLen(d.len)}`;
+    const cr=card.getBoundingClientRect();
+    let tx=e.clientX-cr.left+10, ty=e.clientY-cr.top-70;
+    if(tx+145>card.clientWidth) tx-=160;
+    if(ty<4) ty=4;
+    tooltip.style.left=tx+'px'; tooltip.style.top=ty+'px'; tooltip.style.opacity='1';
+  };
+  canvas.onmouseleave=()=>{tooltip.style.opacity='0';};
+}
+
+renderForecast();
+renderChart();
+update();
+setInterval(update,1000);
+window.addEventListener('resize',renderChart);
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+</script>
+</body>
+</html>
